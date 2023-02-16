@@ -5,3 +5,11 @@ export interface IRequest extends Request {
     _id: string;
   };
 }
+
+// export type IRequest = Request<
+// ParamsDictionary, any, any, QueryString.ParsedQs, Record<string, any>
+// > & {
+//   user: {
+//     _id: string;
+//   };
+// }
