@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import User from "../models/user";
 import { NotFoundError } from "../errors/not-found-err";
 import { BadRequestError } from "../errors/bad-request-err";
+import { IRequest } from "types";
 
 export const getUsers = (req: Request, res: Response, next: NextFunction) => {
   return User.find({})
@@ -23,7 +24,13 @@ export const getUserById = (
       }
       res.send({ data: user });
     })
-    .catch(next);
+    .catch((err) => {
+      if (err.name === "CastError") {
+        next(new BadRequestError("Передан некорректный id пользователя"));
+      } else {
+        next(err);
+      }
+    });
 };
 
 export const createUser = (req: Request, res: Response, next: NextFunction) => {
@@ -47,11 +54,11 @@ export const createUser = (req: Request, res: Response, next: NextFunction) => {
 };
 
 export const updateOwnProfile = (
-  req: Request,
+  req: IRequest,
   res: Response,
   next: NextFunction
 ) => {
-  return User.findByIdAndUpdate((req as any).user._id, req.body, {
+  return User.findByIdAndUpdate(req.user._id, req.body, {
     new: true,
     runValidators: true,
   })
@@ -75,14 +82,14 @@ export const updateOwnProfile = (
 };
 
 export const updateOwnAvatar = (
-  req: Request,
+  req: IRequest,
   res: Response,
   next: NextFunction
 ) => {
   const { avatar } = req.body;
 
   return User.findByIdAndUpdate(
-    (req as any).user._id,
+    req.user._id,
     { avatar },
     { new: true, runValidators: true }
   )

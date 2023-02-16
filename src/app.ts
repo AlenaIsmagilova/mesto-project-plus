@@ -4,6 +4,7 @@ import userRouter from "./routes/users";
 import cardRouter from "./routes/cards";
 import { BadRequestError } from "errors/bad-request-err";
 import { NotFoundError } from "errors/not-found-err";
+import { IRequest } from "./types";
 
 const app = express();
 app.use(express.json());
@@ -12,8 +13,8 @@ app.use(express.urlencoded({ extended: true }));
 const { PORT = 3000 } = process.env;
 mongoose.connect("mongodb://localhost:27017/mestodb");
 
-app.use((req: any, res, next) => {
-  req.user = {
+app.use((req: Request, res: Response, next: NextFunction) => {
+  (req as IRequest).user = {
     _id: "63ea9d23ef5671820db36264",
   };
 

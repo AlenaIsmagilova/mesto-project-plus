@@ -1,6 +1,14 @@
 import mongoose, { Schema } from "mongoose";
 
-const cardSchema = new mongoose.Schema({
+interface ICard {
+  name: string;
+  link: string;
+  owner: Schema.Types.ObjectId;
+  likes: Schema.Types.ObjectId[];
+  createdAt: Date;
+}
+
+const cardSchema = new mongoose.Schema<ICard>({
   name: {
     type: String,
     required: true,
