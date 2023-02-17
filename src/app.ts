@@ -24,6 +24,10 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.use('/users', userRouter);
 app.use('/cards', cardRouter);
 
+app.use((req: Request, res: Response, next: NextFunction) => {
+  next(new NotFoundError('Маршрут не найден'));
+});
+
 app.use(
   (
     err: BadRequestError | NotFoundError,
