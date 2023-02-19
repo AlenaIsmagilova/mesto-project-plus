@@ -1,23 +1,25 @@
 import {
   NextFunction, Request, RequestHandler, Response,
 } from 'express';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 import { IRequest } from '../types';
 import User from '../models/user';
 import NotFoundError from '../errors/not-found-err';
 import BadRequestError from '../errors/bad-request-err';
+import Unauthorized from '../errors/unauthorized';
+import ConflictingError from '../errors/conflicting-err';
 
-export const getUsers = (req: Request, res: Response, next: NextFunction) => User.find({})
+export default (req: Request, res: Response, next: NextFunction) => User.find({})
   .then((users) => res.send({ data: users }))
   .catch(next);
 
-export const getUserById = (
-  req: Request,
+export const getUserById = function (
+  req: IRequest,
   res: Response,
   next: NextFunction,
-) => {
-  const { userId } = req.params;
-
-  return User.findById(userId)
+): void {
+  User.findById(req.user)
     .then((user) => {
       if (!user) {
         throw new NotFoundError('Пользователь по указанному _id не найден');
@@ -31,26 +33,58 @@ export const getUserById = (
         next(err);
       }
     });
-};
+} as RequestHandler;
 
 export const createUser = (req: Request, res: Response, next: NextFunction) => {
-  const { name, about, avatar } = req.body || {};
+  const {
+    name, about, avatar, email, password,
+  } = req.body || {};
 
-  return User.create({ name, about, avatar })
-    .then((user) => {
-      res.send({ data: user });
-    })
-    .catch((err) => {
-      if (err.name === 'ValidationError') {
-        next(
-          new BadRequestError(
-            'Переданы некорректные данные при создании пользователя',
-          ),
-        );
-      } else {
-        next(err);
+  if (!password) {
+    throw new BadRequestError('Поле пароль не может быть пустым');
+  }
+
+  return User.findOne({ email }).then((client) => {
+    if (client) {
+      throw new ConflictingError('Пользователь с таким email уже зарегистрирован');
+    }
+    bcrypt.hash(password, 10).then((hash) => User.create({
+      name, about, avatar, email, password: hash,
+    }))
+      .then((user) => {
+        res.send({ data: user });
+      })
+      .catch((err) => {
+        if (err.name === 'ValidationError') {
+          next(
+            new BadRequestError(
+              'Переданы некорректные данные при создании пользователя',
+            ),
+          );
+        } else {
+          next(err);
+        }
+      });
+  }).catch(next);
+};
+
+export const login = (req: Request, res: Response, next: NextFunction) => {
+  const { email, password } = req.body;
+
+  return User.findOne({ email }).select('+password').then((user) => {
+    if (!user) {
+      throw new NotFoundError('Неправильные почта или пароль');
+    }
+    return bcrypt.compare(password, user.password).then((matched) => {
+      if (!matched) {
+        throw new Unauthorized('Неправильные почта или пароль');
       }
+      const token = jwt.sign({ _id: user._id }, 'some-secret-key', { expiresIn: '7d' });
+      res.cookie('httpOnly', token);
+      res.send({ token });
     });
+  })
+    .catch(next);
 };
 
 export const updateOwnProfile = function (
@@ -58,7 +92,7 @@ export const updateOwnProfile = function (
   res: Response,
   next: NextFunction,
 ): void {
-  User.findByIdAndUpdate(req.user._id, req.body, {
+  User.findByIdAndUpdate(req.user, req.body, {
     new: true,
     runValidators: true,
   })
@@ -89,7 +123,7 @@ export const updateOwnAvatar = function (
   const { avatar } = req.body;
 
   User.findByIdAndUpdate(
-    req.user._id,
+    req.user,
     { avatar },
     { new: true, runValidators: true },
   )
