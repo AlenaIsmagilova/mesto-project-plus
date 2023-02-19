@@ -1,6 +1,7 @@
 import {
   NextFunction, Request, RequestHandler, Response,
 } from 'express';
+import Unauthorized from '../errors/unauthorized';
 import BadRequestError from '../errors/bad-request-err';
 import NotFoundError from '../errors/not-found-err';
 import Card from '../models/card';
@@ -10,20 +11,20 @@ export const getCards = (req: Request, res: Response, next: NextFunction) => Car
   .then((cards) => res.send({ data: cards }))
   .catch(next);
 
-export const deleteCardById = (
-  req: Request,
+export const deleteCardById = function (
+  req: IRequest,
   res: Response,
   next: NextFunction,
-) => {
-  const { cardId } = req.params;
-
-  return Card.findByIdAndRemove({ cardId })
-    .then((card) => {
-      if (!card) {
-        throw new NotFoundError('Карточка с указанным _id не найдена');
-      }
-      res.send({ data: card });
-    })
+):void {
+  Card.findByIdAndRemove(req.params.cardId).then((card) => {
+    if (card?.owner.toString() !== req.user._id) {
+      throw new Unauthorized('Недостаточно прав для удаления карточки');
+    }
+    if (!card) {
+      throw new NotFoundError('Карточка с указанным _id не найдена');
+    }
+    res.send({ data: card });
+  })
     .catch((err) => {
       if (err.name === 'CastError') {
         next(new BadRequestError('Передан некорректный id карточки'));
@@ -31,7 +32,7 @@ export const deleteCardById = (
         next(err);
       }
     });
-};
+} as RequestHandler;
 
 export const createCard = function (
   req: IRequest,
@@ -40,7 +41,7 @@ export const createCard = function (
 ): void {
   const { name, link } = req.body || {};
 
-  Card.create({ name, link, owner: req.user._id })
+  Card.create({ name, link, owner: req.user })
     .then((card) => {
       res.send({ data: card });
     })
@@ -66,7 +67,7 @@ export const likeCard = function (
 
   Card.findByIdAndUpdate(
     cardId,
-    { $addToSet: { likes: req.user._id } },
+    { $addToSet: { likes: req.user } },
     { new: true, runValidators: true },
   )
     .then((card) => {
@@ -97,7 +98,7 @@ export const dislikeCard = function (
 
   Card.findByIdAndUpdate(
     cardId,
-    { $pull: { likes: req.user._id } },
+    { $pull: { likes: req.user } },
     { new: true, runValidators: true },
   )
     .then((card) => {
