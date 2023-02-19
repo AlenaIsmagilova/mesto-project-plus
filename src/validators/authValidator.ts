@@ -1,7 +1,7 @@
 import { celebrate, Joi } from 'celebrate';
 
-export default () => celebrate({
+export default celebrate({
   headers: Joi.object({
-    authorization: Joi.string().required().regex(/^Bearer\s/),
+    authorization: Joi.string().regex(/^Bearer\s/),
   }).unknown(true),
 });
