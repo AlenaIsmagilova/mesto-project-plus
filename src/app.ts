@@ -25,19 +25,19 @@ mongoose.connect('mongodb://localhost:27017/mestodb');
 
 app.use(requestLogger);
 
-app.post('/signin', loginValidator(), login);
-app.post('/signup', createUserValidator(), createUser);
+app.post('/signin', loginValidator, login);
+app.post('/signup', createUserValidator, createUser);
 
 app.use(authValidator, auth);
 
 app.use('/users', userRouter);
 app.use('/cards', cardRouter);
 
-app.use(errorLogger);
-
 app.use((req: Request, res: Response, next: NextFunction) => {
   next(new NotFoundError('Маршрут не найден'));
 });
+
+app.use(errorLogger);
 
 app.use(errors());
 

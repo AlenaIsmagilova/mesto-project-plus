@@ -1,7 +1,7 @@
 import { celebrate, Joi } from 'celebrate';
 import { regExpForLinks } from '../constants/index';
 
-export default () => celebrate({
+export default celebrate({
   headers: Joi.object().keys({ authorization: Joi.string().required() }).unknown(true),
   body: Joi.object().keys({
     name: Joi.string().min(2).max(30).required(),
