@@ -1,11 +1,11 @@
 import {
   NextFunction, Request, RequestHandler, Response,
 } from 'express';
-import Unauthorized from '../errors/unauthorized';
 import BadRequestError from '../errors/bad-request-err';
 import NotFoundError from '../errors/not-found-err';
 import Card from '../models/card';
 import { IRequest } from '../types';
+import ForbiddenError from '../errors/forbidden-err';
 
 export const getCards = (req: Request, res: Response, next: NextFunction) => Card.find({})
   .then((cards) => res.send({ data: cards }))
@@ -16,14 +16,16 @@ export const deleteCardById = function (
   res: Response,
   next: NextFunction,
 ):void {
-  Card.findByIdAndRemove(req.params.cardId).then((card) => {
-    if (card?.owner.toString() !== req.user._id) {
-      throw new Unauthorized('Недостаточно прав для удаления карточки');
+  Card.findById(req.params.cardId).then((card) => {
+    if (card?.owner.toString() !== req.user!._id) {
+      throw new ForbiddenError('Недостаточно прав для удаления карточки');
     }
     if (!card) {
       throw new NotFoundError('Карточка с указанным _id не найдена');
     }
-    res.send({ data: card });
+    Card.deleteOne({ _id: req.params.cardId }).then(() => {
+      res.send({ data: card });
+    }).catch(next);
   })
     .catch((err) => {
       if (err.name === 'CastError') {

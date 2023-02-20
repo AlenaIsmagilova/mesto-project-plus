@@ -40,32 +40,26 @@ export const createUser = (req: Request, res: Response, next: NextFunction) => {
     name, about, avatar, email, password,
   } = req.body || {};
 
-  if (!password) {
-    throw new BadRequestError('Поле пароль не может быть пустым');
-  }
-
-  return User.findOne({ email }).then((client) => {
-    if (client) {
-      throw new ConflictingError('Пользователь с таким email уже зарегистрирован');
-    }
-    bcrypt.hash(password, 10).then((hash) => User.create({
-      name, about, avatar, email, password: hash,
-    }))
-      .then((user) => {
-        res.send({ data: user });
-      })
-      .catch((err) => {
-        if (err.name === 'ValidationError') {
-          next(
-            new BadRequestError(
-              'Переданы некорректные данные при создании пользователя',
-            ),
-          );
-        } else {
-          next(err);
-        }
-      });
-  }).catch(next);
+  bcrypt.hash(password, 10).then((hash) => User.create({
+    name, about, avatar, email, password: hash,
+  }))
+    .then((user) => {
+      res.send({ data: user });
+    })
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        next(
+          new BadRequestError(
+            'Переданы некорректные данные при создании пользователя',
+          ),
+        );
+      } else if (err.code === 11000) {
+        next(new ConflictingError('Пользователь с таким email уже зарегистрирован'));
+      } else {
+        next(err);
+      }
+    })
+    .catch(next);
 };
 
 export const login = (req: Request, res: Response, next: NextFunction) => {
@@ -73,7 +67,7 @@ export const login = (req: Request, res: Response, next: NextFunction) => {
 
   return User.findOne({ email }).select('+password').then((user) => {
     if (!user) {
-      throw new NotFoundError('Неправильные почта или пароль');
+      throw new Unauthorized('Неправильные почта или пароль');
     }
     return bcrypt.compare(password, user.password).then((matched) => {
       if (!matched) {
@@ -92,7 +86,9 @@ export const updateOwnProfile = function (
   res: Response,
   next: NextFunction,
 ): void {
-  User.findByIdAndUpdate(req.user, req.body, {
+  const { name, about } = req.body;
+
+  User.findByIdAndUpdate(req.user, { name, about }, {
     new: true,
     runValidators: true,
   })

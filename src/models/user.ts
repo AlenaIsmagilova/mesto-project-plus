@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { regExpForEmails } from '../constants/index';
+import validator from 'validator';
 
 interface IUser {
   name: string;
@@ -32,7 +32,7 @@ const userSchema = new mongoose.Schema<IUser>({
     unique: true,
     validate: {
       validator(element: string) {
-        return regExpForEmails.test(element);
+        validator.isURL(element);
       },
       message: (props) => `${props.value} is not a valid email`,
     },
