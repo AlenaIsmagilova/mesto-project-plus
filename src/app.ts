@@ -21,7 +21,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const { PORT = 3000 } = process.env;
-mongoose.connect('mongodb://localhost:27017/mestodb');
+mongoose.connect('mongodb://localhost:27017/alenadb');
 
 app.use(requestLogger);
 
@@ -52,7 +52,6 @@ app.use(
 
     res.status(statusCode).send({
       message: statusCode === 500 ? 'На сервере произошла ошибка' : message,
-      err,
     });
 
     next();

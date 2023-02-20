@@ -1,5 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
-import { regExpForLinks } from '../constants/index';
+import validator from 'validator';
 
 interface ICard {
   name: string;
@@ -21,7 +21,7 @@ const cardSchema = new mongoose.Schema<ICard>({
     required: true,
     validate: {
       validator(element: string) {
-        return regExpForLinks.test(element);
+        validator.isEmail(element);
       },
       message: (props) => `${props.value} is not correct link`,
     },
@@ -34,12 +34,13 @@ const cardSchema = new mongoose.Schema<ICard>({
   likes: [
     {
       type: Schema.Types.ObjectId,
+      ref: 'user',
       default: [],
     },
   ],
   createdAt: {
     type: Date,
-    default: Date.now(),
+    default: Date.now,
   },
 });
 
