@@ -58,8 +58,7 @@ export const createUser = (req: Request, res: Response, next: NextFunction) => {
       } else {
         next(err);
       }
-    })
-    .catch(next);
+    });
 };
 
 export const login = (req: Request, res: Response, next: NextFunction) => {
