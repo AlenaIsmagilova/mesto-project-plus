@@ -17,11 +17,11 @@ export const deleteCardById = function (
   next: NextFunction,
 ):void {
   Card.findById(req.params.cardId).then((card) => {
-    if (card?.owner.toString() !== req.user!._id) {
-      throw new ForbiddenError('Недостаточно прав для удаления карточки');
-    }
     if (!card) {
       throw new NotFoundError('Карточка с указанным _id не найдена');
+    }
+    if (card.owner.toString() !== req.user!._id) {
+      throw new ForbiddenError('Недостаточно прав для удаления карточки');
     }
     Card.deleteOne({ _id: req.params.cardId }).then(() => {
       res.send({ data: card });
